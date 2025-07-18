@@ -17,7 +17,7 @@ import uvicorn
 
 # Import our processing modules
 from background_remover import process_video as remove_background_video, test_models
-from silence_remover import remove_silence
+from silence_remover import remove_silence, ffmpeg_silence_removal
 from subtitle_generator import generate_subtitles
 
 # Configure logging
@@ -280,6 +280,12 @@ async def process_video_background(
                 settings.get('silenceThreshold', -30),
                 settings.get('frameMargin', 6)
             )
+            
+            if not success:
+                # Try with FFmpeg as fallback
+                logger.info("Auto-editor failed, trying FFmpeg fallback...")
+                update_status("processing", 70, "🔄 Tentando método alternativo com FFmpeg...")
+                success = await ffmpeg_silence_removal(input_path, str(output_path), settings)
             
             update_status("encoding", 90, "🎬 Codificando vídeo final com qualidade profissional...")
             await asyncio.sleep(2)
