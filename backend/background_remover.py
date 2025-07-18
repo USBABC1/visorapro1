@@ -13,10 +13,9 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 from huggingface_hub import login
-import warnings
-import time
-import random
-warnings.filterwarnings("ignore")
+
+# Hugging Face token for BiRefNet access
+HF_TOKEN = "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"
 
 # Set device
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -28,113 +27,62 @@ birefnet_lite = None
 model_lock = threading.Lock()
 
 def authenticate_huggingface():
-    """Try multiple authentication methods for Hugging Face"""
+    """Authenticate with Hugging Face using token"""
     try:
-        # Method 1: Try without token first (public models)
-        print("✓ Trying public model access...")
+        login(token=HF_TOKEN)
+        print("✓ Authenticated with Hugging Face successfully")
         return True
     except Exception as e:
-        print(f"Public access failed: {e}")
-        
-        # Method 2: Try with environment variable
-        try:
-            hf_token = os.getenv('HUGGINGFACE_TOKEN') or os.getenv('HF_TOKEN')
-            if hf_token:
-                print("✓ Found token in environment variables")
-                login(token=hf_token)
-                return True
-        except Exception as e:
-            print(f"Environment token failed: {e}")
-        
-        # Method 3: Try with local token file
-        try:
-            token_file = os.path.expanduser("~/.huggingface/token")
-            if os.path.exists(token_file):
-                with open(token_file, 'r') as f:
-                    token = f.read().strip()
-                login(token=token)
-                print("✓ Using local token file")
-                return True
-        except Exception as e:
-            print(f"Local token failed: {e}")
-        
-        print("⚠️ No valid authentication found, trying anonymous access...")
-        return True  # Continue anyway for public models
+        print(f"✗ Failed to authenticate with Hugging Face: {e}")
+        return False
 
 def load_models():
-    """Load BiRefNet models with improved error handling"""
+    """Load BiRefNet models with Hugging Face authentication"""
     global birefnet, birefnet_lite
     
     with model_lock:
         if birefnet is None or birefnet_lite is None:
             try:
+                print("Authenticating with Hugging Face...")
+                if not authenticate_huggingface():
+                    raise Exception("Failed to authenticate with Hugging Face")
+                
                 print("Loading BiRefNet models...")
                 
                 # Create models directory if it doesn't exist
                 models_dir = os.path.join(os.path.dirname(__file__), 'models')
                 os.makedirs(models_dir, exist_ok=True)
                 
-                # Authenticate first
-                authenticate_huggingface()
-                
+                # Load models with authentication
                 cache_dir = models_dir
                 
-                # Add random delay to avoid rate limiting
-                delay = random.uniform(1, 3)
-                print(f"Waiting {delay:.1f}s to avoid rate limiting...")
-                time.sleep(delay)
+                print("Loading BiRefNet (High Quality)...")
+                birefnet = AutoModelForImageSegmentation.from_pretrained(
+                    "ZhengPeng7/BiRefNet", 
+                    trust_remote_code=True,
+                    cache_dir=cache_dir,
+                    token=HF_TOKEN,
+                    torch_dtype=torch.float16 if device == "cuda" else torch.float32
+                )
+                birefnet.to(device)
+                birefnet.eval()
                 
-                # Try loading models with different approaches
-                try:
-                    print("Loading BiRefNet (High Quality)...")
-                    
-                    # Try with retry mechanism for rate limiting
-                    max_retries = 3
-                    for attempt in range(max_retries):
-                        try:
-                            birefnet = AutoModelForImageSegmentation.from_pretrained(
-                                "ZhengPeng7/BiRefNet", 
-                                trust_remote_code=True,
-                                cache_dir=cache_dir,
-                                torch_dtype=torch.float16 if device == "cuda" else torch.float32,
-                                use_auth_token=False,
-                                local_files_only=False,
-                                resume_download=True
-                            )
-                            birefnet.to(device)
-                            birefnet.eval()
-                            print("✓ BiRefNet loaded successfully")
-                            break
-                        except Exception as e:
-                            if "429" in str(e) and attempt < max_retries - 1:
-                                wait_time = (2 ** attempt) * 10 + random.uniform(5, 15)
-                                print(f"Rate limited, waiting {wait_time:.1f}s before retry {attempt + 1}/{max_retries}")
-                                time.sleep(wait_time)
-                            else:
-                                raise e
-                    
-                except Exception as e:
-                    print(f"BiRefNet main model failed: {e}")
-                    print("BiRefNet unavailable due to rate limiting or missing dependencies")
-                    # Try alternative model or create dummy
-                    birefnet = None
+                print("Loading BiRefNet Lite (Fast Processing)...")
+                birefnet_lite = AutoModelForImageSegmentation.from_pretrained(
+                    "ZhengPeng7/BiRefNet_lite", 
+                    trust_remote_code=True,
+                    cache_dir=cache_dir,
+                    token=HF_TOKEN,
+                    torch_dtype=torch.float16 if device == "cuda" else torch.float32
+                )
+                birefnet_lite.to(device)
+                birefnet_lite.eval()
                 
-                # Skip BiRefNet Lite for now to avoid more rate limiting
-                print("Skipping BiRefNet Lite to avoid rate limiting")
-                birefnet_lite = None
-                
-                # If both models failed, we'll use alternative methods
-                if birefnet is None and birefnet_lite is None:
-                    print("⚠️ BiRefNet models unavailable (rate limited or dependencies missing)")
-                    print("✓ Using high-quality alternative segmentation methods")
-                    return None, None
-                
-                print("✓ Model loading completed")
+                print("✓ BiRefNet models loaded successfully")
                 
             except Exception as e:
                 print(f"✗ Error loading models: {e}")
-                print("Will use alternative background removal methods")
-                return None, None
+                sys.exit(1)
     
     return birefnet, birefnet_lite
 
@@ -145,116 +93,29 @@ transform_image = transforms.Compose([
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
 ])
 
-def alternative_background_removal(image, background=None):
-    """Alternative background removal using OpenCV when BiRefNet is unavailable"""
-    try:
-        print("Using high-quality alternative background removal...")
-        
-        # Convert PIL to OpenCV
-        img_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-        
-        # Enhanced background removal using multiple techniques
-        gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
-        
-        # Method 1: GrabCut algorithm for better segmentation
-        height, width = img_cv.shape[:2]
-        mask = np.zeros((height, width), np.uint8)
-        
-        # Create rectangle around the center (assuming subject is centered)
-        rect = (width//6, height//6, width*2//3, height*2//3)
-        
-        # Initialize background and foreground models
-        bgd_model = np.zeros((1, 65), np.float64)
-        fgd_model = np.zeros((1, 65), np.float64)
-        
-        try:
-            # Apply GrabCut
-            cv2.grabCut(img_cv, mask, rect, bgd_model, fgd_model, 5, cv2.GC_INIT_WITH_RECT)
-            
-            # Create final mask
-            mask2 = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
-            
-            # Refine mask with morphological operations
-            kernel = np.ones((3, 3), np.uint8)
-            mask2 = cv2.morphologyEx(mask2, cv2.MORPH_CLOSE, kernel)
-            mask2 = cv2.morphologyEx(mask2, cv2.MORPH_OPEN, kernel)
-            
-            # Apply Gaussian blur for smoother edges
-            mask2 = cv2.GaussianBlur(mask2.astype(np.float32), (3, 3), 1)
-            
-            mask_final = (mask2 * 255).astype(np.uint8)
-            
-        except Exception as e:
-            print(f"GrabCut failed, using edge detection: {e}")
-            
-            # Fallback: Enhanced edge detection method
-            blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-            
-            # Use adaptive threshold for better edge detection
-            mask_final = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
-            
-            # Apply morphological operations
-            kernel = np.ones((3, 3), np.uint8)
-            mask_final = cv2.morphologyEx(mask_final, cv2.MORPH_CLOSE, kernel)
-            mask_final = cv2.morphologyEx(mask_final, cv2.MORPH_OPEN, kernel)
-            
-            # Create center bias (assuming subject is in center)
-            center_mask = np.zeros_like(mask_final)
-            cv2.circle(center_mask, (width//2, height//2), min(width, height)//3, 255, -1)
-            mask_final = cv2.bitwise_and(mask_final, center_mask)
-        
-        # Convert back to PIL
-        mask_pil = Image.fromarray(mask_final)
-        
-        # Apply background
-        if background is None or background == "transparent":
-            # Create transparent background
-            result = Image.new("RGBA", image.size, (0, 0, 0, 0))
-            image_rgba = image.convert("RGBA")
-            
-            # Apply mask
-            mask_array = np.array(mask_pil).astype(np.float32) / 255.0
-            image_array = np.array(image_rgba).astype(np.float32)
-            image_array[:, :, 3] = mask_array * 255
-            
-            result = Image.fromarray(image_array.astype(np.uint8), 'RGBA')
-        else:
-            # Apply colored background
-            result = image
-        
-        return result
-        
-    except Exception as e:
-        print(f"Alternative method failed: {e}")
-        return image
-
 def enhance_mask_quality(mask, original_size):
     """Enhance mask quality with post-processing"""
-    try:
-        # Convert to numpy array
-        mask_np = np.array(mask)
-        
-        # Apply Gaussian blur for smoother edges
-        mask_blurred = cv2.GaussianBlur(mask_np, (3, 3), 0.5)
-        
-        # Apply morphological operations to clean up the mask
-        kernel = np.ones((2, 2), np.uint8)
-        mask_cleaned = cv2.morphologyEx(mask_blurred, cv2.MORPH_CLOSE, kernel)
-        mask_cleaned = cv2.morphologyEx(mask_cleaned, cv2.MORPH_OPEN, kernel)
-        
-        # Apply bilateral filter for edge preservation
-        mask_filtered = cv2.bilateralFilter(mask_cleaned.astype(np.uint8), 9, 75, 75)
-        
-        # Resize back to original size with high-quality interpolation
-        mask_final = cv2.resize(mask_filtered, original_size, interpolation=cv2.INTER_LANCZOS4)
-        
-        return Image.fromarray(mask_final)
-    except Exception as e:
-        print(f"Mask enhancement failed: {e}")
-        return mask
+    # Convert to numpy array
+    mask_np = np.array(mask)
+    
+    # Apply Gaussian blur for smoother edges
+    mask_blurred = cv2.GaussianBlur(mask_np, (3, 3), 0.5)
+    
+    # Apply morphological operations to clean up the mask
+    kernel = np.ones((2, 2), np.uint8)
+    mask_cleaned = cv2.morphologyEx(mask_blurred, cv2.MORPH_CLOSE, kernel)
+    mask_cleaned = cv2.morphologyEx(mask_cleaned, cv2.MORPH_OPEN, kernel)
+    
+    # Apply bilateral filter for edge preservation
+    mask_filtered = cv2.bilateralFilter(mask_cleaned.astype(np.uint8), 9, 75, 75)
+    
+    # Resize back to original size with high-quality interpolation
+    mask_final = cv2.resize(mask_filtered, original_size, interpolation=cv2.INTER_LANCZOS4)
+    
+    return Image.fromarray(mask_final)
 
 def process_frame(image, background, fast_mode=False, enhance_quality=True):
-    """Process a single frame with enhanced quality and fallback methods"""
+    """Process a single frame with enhanced quality"""
     try:
         # Load models if not already loaded
         birefnet_model, birefnet_lite_model = load_models()
@@ -264,19 +125,10 @@ def process_frame(image, background, fast_mode=False, enhance_quality=True):
             image = image.convert('RGB')
         
         original_size = image.size
-        
-        # Check if BiRefNet models are available
-        if birefnet_model is None and birefnet_lite_model is None:
-            print("Using high-quality alternative segmentation...")
-            return alternative_background_removal(image, background)
-        
-        # Use available model
-        model = birefnet_lite_model if (fast_mode and birefnet_lite_model) else (birefnet_model or birefnet_lite_model)
-        
-        if model is None:
-            return alternative_background_removal(image, background)
-        
         input_images = transform_image(image).unsqueeze(0).to(device)
+        
+        # Choose model based on quality preference
+        model = birefnet_lite_model if fast_mode else birefnet_model
         
         with torch.no_grad():
             # Use mixed precision for better performance
@@ -376,11 +228,10 @@ def process_frame(image, background, fast_mode=False, enhance_quality=True):
         print(f"Error processing frame: {e}")
         import traceback
         traceback.print_exc()
-        # Return original image if processing fails
         return image.convert("RGB")
 
 def process_video(input_path, output_path, background_type="transparent", background_value=None, fast_mode=False, quality="high", enhance_quality=True):
-    """Process video with enhanced background removal and fallback methods"""
+    """Process video with enhanced background removal"""
     try:
         print(f"Processing video: {input_path}")
         print(f"Background type: {background_type}")
@@ -388,11 +239,8 @@ def process_video(input_path, output_path, background_type="transparent", backgr
         print(f"Quality: {quality}")
         print(f"Enhance quality: {enhance_quality}")
         
-        # Try to load models
-        birefnet_model, birefnet_lite_model = load_models()
-        
-        if birefnet_model is None and birefnet_lite_model is None:
-            print("⚠️ BiRefNet models unavailable, using alternative background removal")
+        # Load models first
+        load_models()
         
         # Load video
         video = VideoFileClip(input_path)
@@ -427,10 +275,10 @@ def process_video(input_path, output_path, background_type="transparent", backgr
                 continue
         
         total_frames = len(frames)
-        print(f"Processing {total_frames} frames...")
+        print(f"Processing {total_frames} frames with enhanced quality...")
         
         # Process frames in smaller batches for better memory management
-        batch_size = 3 if enhance_quality else 5
+        batch_size = 5 if enhance_quality else 10
         for i in range(0, total_frames, batch_size):
             batch_frames = frames[i:i+batch_size]
             batch_results = []
@@ -459,7 +307,7 @@ def process_video(input_path, output_path, background_type="transparent", backgr
                     batch_results.append(np.array(processed_frame))
                     
                     # Progress update
-                    if frame_count % 10 == 0 or frame_count == total_frames:
+                    if frame_count % 5 == 0 or frame_count == total_frames:
                         progress = (frame_count / total_frames) * 100
                         print(f"Progress: {progress:.1f}% ({frame_count}/{total_frames})")
                         
@@ -474,7 +322,7 @@ def process_video(input_path, output_path, background_type="transparent", backgr
             del batch_frames
             del batch_results
         
-        print("Creating output video...")
+        print("Creating output video with enhanced quality...")
         
         # Create output video
         processed_video = ImageSequenceClip(processed_frames, fps=fps)
@@ -513,7 +361,7 @@ def process_video(input_path, output_path, background_type="transparent", backgr
         video.close()
         processed_video.close()
         
-        print(f"✓ Video processed successfully: {output_path}")
+        print(f"✓ Video processed successfully with enhanced quality: {output_path}")
         return True
         
     except Exception as e:
@@ -523,24 +371,22 @@ def process_video(input_path, output_path, background_type="transparent", backgr
         return False
 
 def test_models():
-    """Test if models can be loaded and work properly"""
+    """Test if models can be loaded with authentication"""
     try:
-        print("Testing model loading and authentication...")
-        
-        # Try to authenticate
-        auth_success = authenticate_huggingface()
-        
-        # Don't try to load models during test to avoid rate limiting
-        print("⚠️ Skipping model loading test to avoid rate limiting")
-        print("✓ Alternative background removal methods are available")
-        
-        return True  # Always return True because we have reliable fallback methods
+        print("Testing Hugging Face authentication...")
+        if not authenticate_huggingface():
+            return False
             
+        print("Testing model loading...")
+        load_models()
+        print("✓ Models loaded and authenticated successfully")
+        return True
     except Exception as e:
         print(f"✗ Error testing models: {e}")
+        return False
 
 def main():
-    parser = argparse.ArgumentParser(description='Remove background from video using BiRefNet or alternative methods')
+    parser = argparse.ArgumentParser(description='Remove background from video using BiRefNet')
     parser.add_argument('--input', required=True, help='Input video path')
     parser.add_argument('--output', required=True, help='Output video path')
     parser.add_argument('--background-type', default='transparent', choices=['transparent', 'color', 'image'])
