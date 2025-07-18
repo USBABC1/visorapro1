@@ -2,22 +2,8 @@
 title Video Editor Pro - Setup Completo
 color 0A
 echo.
-echo  ██╗   ██╗██╗██████╗ ███████╗ ██████╗     ███████╗██████╗ ██╗████████╗ ██████╗ ██████╗ 
-echo  ██║   ██║██║██╔══██╗██╔════╝██╔═══██╗    ██╔════╝██╔══██╗██║╚══██╔══╝██╔═══██╗██╔══██╗
-echo  ██║   ██║██║██║  ██║█████╗  ██║   ██║    █████╗  ██║  ██║██║   ██║   ██║   ██║██████╔╝
-echo  ╚██╗ ██╔╝██║██║  ██║██╔══╝  ██║   ██║    ██╔══╝  ██║  ██║██║   ██║   ██║   ██║██╔══██╗
-echo   ╚████╔╝ ██║██████╔╝███████╗╚██████╔╝    ███████╗██████╔╝██║   ██║   ╚██████╔╝██║  ██║
-echo    ╚═══╝  ╚═╝╚═════╝ ╚══════╝ ╚═════╝     ╚══════╝╚═════╝ ╚═╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝
-echo.
-echo                           ██████╗ ██████╗  ██████╗ 
-echo                           ██╔══██╗██╔══██╗██╔═══██╗
-echo                           ██████╔╝██████╔╝██║   ██║
-echo                           ██╔═══╝ ██╔══██╗██║   ██║
-echo                           ██║     ██║  ██║╚██████╔╝
-echo                           ╚═╝     ╚═╝  ╚═╝ ╚═════╝ 
-echo.
 echo ========================================
-echo    Setup Automático - Instalação Completa
+echo    Video Editor Pro - Setup Automático
 echo ========================================
 echo.
 
@@ -31,7 +17,7 @@ if %errorLevel% neq 0 (
 
 :: Verificar se Python está instalado
 echo [1/12] Verificando Python...
-python --version >nul 2>&1
+where python >nul 2>&1
 if errorlevel 1 (
     echo Python não encontrado. Instalando Python 3.11...
     echo.
@@ -46,7 +32,7 @@ if errorlevel 1 (
         del python_installer.exe
         
         :: Atualizar PATH
-        set PATH=%PATH%;C:\Program Files\Python311;C:\Program Files\Python311\Scripts
+        set "PATH=%PATH%;C:\Program Files\Python311;C:\Program Files\Python311\Scripts"
         
         echo Python instalado com sucesso!
     ) else (
@@ -61,7 +47,7 @@ if errorlevel 1 (
 
 :: Verificar se Node.js está instalado
 echo [2/12] Verificando Node.js...
-node --version >nul 2>&1
+where node >nul 2>&1
 if errorlevel 1 (
     echo Node.js não encontrado. Instalando Node.js 20...
     echo.
@@ -76,7 +62,7 @@ if errorlevel 1 (
         del nodejs_installer.msi
         
         :: Atualizar PATH
-        set PATH=%PATH%;C:\Program Files\nodejs
+        set "PATH=%PATH%;C:\Program Files\nodejs"
         
         echo Node.js instalado com sucesso!
     ) else (
@@ -91,7 +77,7 @@ if errorlevel 1 (
 
 :: Verificar se FFmpeg está instalado
 echo [3/12] Verificando FFmpeg...
-ffmpeg -version >nul 2>&1
+where ffmpeg >nul 2>&1
 if errorlevel 1 (
     echo FFmpeg não encontrado. Instalando FFmpeg...
     echo.
@@ -177,8 +163,8 @@ echo [9/12] Instalando dependências críticas...
 python -m pip install moviepy==1.0.3
 python -m pip install imageio==2.31.1
 python -m pip install imageio-ffmpeg==0.4.8
-python -m pip install numpy>=1.24.0
-python -m pip install opencv-python>=4.7.0
+python -m pip install "numpy>=1.24.0"
+python -m pip install "opencv-python>=4.7.0"
 
 :: Instalar todas as dependências Python
 echo [10/12] Instalando dependências Python...
@@ -187,15 +173,15 @@ if errorlevel 1 (
     echo AVISO: Algumas dependências falharam, tentando instalação individual...
     
     :: Tentar instalar dependências críticas individualmente
-    python -m pip install transformers>=4.30.0
-    python -m pip install huggingface_hub>=0.16.0
-    python -m pip install accelerate>=0.20.0
-    python -m pip install openai-whisper>=20230314
-    python -m pip install fastapi>=0.100.0
-    python -m pip install uvicorn>=0.22.0
-    python -m pip install python-multipart>=0.0.6
-    python -m pip install aiofiles>=23.1.0
-    python -m pip install auto-editor>=23.0.0
+    python -m pip install "transformers>=4.30.0"
+    python -m pip install "huggingface_hub>=0.16.0"
+    python -m pip install "accelerate>=0.20.0"
+    python -m pip install "openai-whisper>=20230314"
+    python -m pip install "fastapi>=0.100.0"
+    python -m pip install "uvicorn>=0.22.0"
+    python -m pip install "python-multipart>=0.0.6"
+    python -m pip install "aiofiles>=23.1.0"
+    python -m pip install "auto-editor>=23.0.0"
 )
 
 :: Instalar dependências Node.js
@@ -226,7 +212,7 @@ python -c "import whisper; print('✓ Whisper: OK')" 2>nul || (
 )
 
 echo Testando auto-editor...
-auto-editor --version >nul 2>&1 || (
+where auto-editor >nul 2>&1 || (
     echo "Instalando auto-editor..."
     python -m pip install auto-editor
 )
