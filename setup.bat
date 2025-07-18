@@ -160,6 +160,9 @@ python -m pip install torch torchvision torchaudio --index-url https://download.
 
 :: Instalar dependências específicas primeiro
 echo [9/12] Instalando dependências críticas...
+python -m pip install einops>=0.6.0
+python -m pip install kornia>=0.6.0
+python -m pip install timm>=0.9.0
 python -m pip install moviepy==1.0.3
 python -m pip install imageio==2.31.1
 python -m pip install imageio-ffmpeg==0.4.8
