@@ -315,20 +315,33 @@ async def process_video_background(
             await asyncio.sleep(3)
             
             update_status("processing", 60, "🎭 Processando remoção de background com IA...")
-            # Run in thread pool to avoid blocking
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(
-                    remove_background_video,
+            
+            # Try BiRefNet first, fallback to fast method
+            try:
+                # Run in thread pool to avoid blocking
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        remove_background_video,
+                        input_path,
+                        str(output_path),
+                        background_type=settings.get('backgroundType', 'transparent'),
+                        background_value=settings.get('backgroundValue'),
+                        fast_mode=settings.get('fastMode', False),
+                        quality=settings.get('quality', 'high'),
+                        enhance_quality=settings.get('enhanceQuality', True)
+                    )
+                    success = future.result()
+            except Exception as e:
+                logger.warning(f"BiRefNet failed, using fast method: {e}")
+                # Import and use fast background remover
+                from background_remover_fast import process_video_fast
+                success = process_video_fast(
                     input_path,
                     str(output_path),
                     background_type=settings.get('backgroundType', 'transparent'),
-                    background_value=settings.get('backgroundValue'),
-                    fast_mode=settings.get('fastMode', False),
-                    quality=settings.get('quality', 'high'),
-                    enhance_quality=settings.get('enhanceQuality', True)
+                    background_value=settings.get('backgroundValue')
                 )
-                success = future.result()
             
             update_status("encoding", 90, "✨ Aplicando efeitos finais e codificando...")
             await asyncio.sleep(2)

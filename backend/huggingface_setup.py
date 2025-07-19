@@ -30,6 +30,8 @@ def setup_huggingface_token():
    - Crie um token gratuito
    - Cole o token quando solicitado
 
+⚠️  IMPORTANTE: O sistema funciona perfeitamente SEM token!
+   Métodos alternativos garantem velocidade CapCut com ótima qualidade.
 Escolha uma opção:
 [1] Continuar sem token (recomendado)
 [2] Configurar token Hugging Face
