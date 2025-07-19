@@ -168,6 +168,10 @@ python -m pip install imageio==2.31.1
 python -m pip install imageio-ffmpeg==0.4.8
 python -m pip install "numpy>=1.24.0"
 python -m pip install "opencv-python>=4.7.0"
+python -m pip install librosa>=0.10.0
+python -m pip install soundfile>=0.12.0
+python -m pip install scipy>=1.10.0
+python -m pip install dlib>=19.24.0
 
 :: Instalar todas as dependências Python
 echo [10/12] Instalando dependências Python...
@@ -185,6 +189,27 @@ if errorlevel 1 (
     python -m pip install "python-multipart>=0.0.6"
     python -m pip install "aiofiles>=23.1.0"
     python -m pip install "auto-editor>=23.0.0"
+)
+
+:: Instalar dependências específicas para novas funcionalidades
+echo Instalando dependências para Video2X e Gaze Redirection...
+python -m pip install "librosa>=0.10.0"
+python -m pip install "soundfile>=0.12.0"
+python -m pip install "scipy>=1.10.0"
+
+:: Tentar instalar dlib (pode falhar em alguns sistemas)
+echo Tentando instalar dlib para redirecionamento de olhar...
+python -m pip install dlib>=19.24.0 2>nul || (
+    echo AVISO: dlib não pôde ser instalado automaticamente
+    echo Redirecionamento de olhar funcionará com OpenCV apenas
+)
+
+:: Verificar se Real-ESRGAN está disponível
+echo Verificando Real-ESRGAN para upscaling...
+where realesrgan-ncnn-vulkan >nul 2>&1 || (
+    echo AVISO: Real-ESRGAN não encontrado
+    echo Upscaling funcionará com OpenCV apenas
+    echo Para instalar Real-ESRGAN: https://github.com/xinntao/Real-ESRGAN/releases
 )
 
 :: Instalar dependências Node.js

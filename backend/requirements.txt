@@ -31,6 +31,7 @@ openai-whisper>=20230314
 librosa>=0.10.0
 soundfile>=0.12.0
 scipy>=1.10.0
+scipy>=1.10.0
 
 # Video processing
 ffmpeg-python>=0.2.0
@@ -47,3 +48,7 @@ aiofiles>=23.1.0
 
 # Optional dependencies for advanced features
 dlib>=19.24.0
+
+# Additional dependencies for new features
+urllib3>=1.26.0
+bz2file>=0.98

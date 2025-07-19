@@ -91,6 +91,17 @@ if errorlevel 1 (
 ) else (
     echo ✅ Sistema de IA funcionando perfeitamente
 )
+
+:: Testar novas funcionalidades
+echo Testando Video2X upscaling...
+python -c "from video_upscaler import Video2XUpscaler; print('✅ Video2X disponível')" 2>nul || echo "⚠️ Video2X com limitações"
+
+echo Testando Gaze Redirection...
+python -c "from gaze_redirector import GazeRedirector; print('✅ Gaze Redirection disponível')" 2>nul || echo "⚠️ Gaze Redirection com limitações"
+
+echo Testando Advanced Silence Remover...
+python -c "from silence_remover_advanced import AdvancedSilenceRemover; print('✅ Advanced Silence Remover disponível')" 2>nul || echo "⚠️ Advanced Silence Remover com limitações"
+
 cd ..
 
 :: Iniciar servidor backend
@@ -142,8 +153,11 @@ echo 🎬 RECURSOS DISPONÍVEIS:
 echo ✅ Interface profissional estilo CapCut
 echo ✅ Player de vídeo sofisticado e completo
 echo ✅ Remoção automática de silêncios (auto-editor)
-echo ✅ Remoção de background com IA + métodos alternativos
+echo ✅ Remoção de background ultra-rápida (velocidade CapCut)
+echo ✅ Editor de silêncio avançado (detecta erros e reinícios)
 echo ✅ Geração de legendas sincronizadas (Whisper)
+echo ✅ Upscaling de vídeo com IA (Video2X)
+echo ✅ Redirecionamento de olhar automático
 echo ✅ Exportação em múltiplos formatos
 echo ✅ Configurações avançadas de qualidade
 echo.
@@ -159,7 +173,10 @@ echo • Use "Alta Qualidade" para resultados profissionais
 echo • Configure o limite de silêncio conforme necessário
 echo • Experimente diferentes backgrounds na remoção de fundo
 echo • Legendas são exportadas em formato SRT
-echo • Sistema funciona mesmo sem token Hugging Face
+echo • Remoção de background agora é ultra-rápida como CapCut
+echo • Editor de silêncio detecta automaticamente erros de fala
+echo • Upscaling transforma 720p em 4K com IA
+echo • Redirecionamento de olhar cria conexão visual perfeita
 echo.
 echo ⚠️  Para parar todos os servidores, pressione qualquer tecla...
 pause >nul
