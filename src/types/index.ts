@@ -22,3 +22,14 @@ export interface VideoFile {
   size: number;
   format: string;
 }
+
+export interface UpscaleSettings {
+  scaleFactor: 2 | 4;
+  model: 'auto' | 'realesrgan-x4plus' | 'realesrgan-x2plus' | 'waifu2x' | 'opencv-edsr' | 'opencv-espcn';
+  quality: 'low' | 'medium' | 'high';
+}
+
+export interface GazeSettings {
+  targetDirection: number; // -1.0 to 1.0
+  intensity: number; // 0.0 to 1.0
+}

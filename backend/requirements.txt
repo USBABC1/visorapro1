@@ -30,6 +30,7 @@ openai-whisper>=20230314
 # Audio processing
 librosa>=0.10.0
 soundfile>=0.12.0
+scipy>=1.10.0
 
 # Video processing
 ffmpeg-python>=0.2.0
@@ -43,3 +44,6 @@ python-multipart>=0.0.6
 tqdm>=4.65.0
 requests>=2.31.0
 aiofiles>=23.1.0
+
+# Optional dependencies for advanced features
+dlib>=19.24.0

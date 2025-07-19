@@ -154,6 +154,7 @@ const App: React.FC = () => {
 
   // Processing functions
   const startProcessing = async (operation: 'remove_silence' | 'remove_background' | 'generate_subtitles') => {
+  const startProcessing = async (operation: 'remove_silence' | 'remove_background' | 'generate_subtitles' | 'upscale_video' | 'redirect_gaze') => {
     if (!sessionId) {
       alert('Por favor, carregue um vídeo primeiro.');
       return;
@@ -191,6 +192,16 @@ const App: React.FC = () => {
       } else if (operation === 'generate_subtitles') {
         requestSettings = {
           language: settings.subtitleLanguage.split('-')[0]
+        };
+      } else if (operation === 'upscale_video') {
+        requestSettings = {
+          scaleFactor: 2, // Default 2x upscaling
+          model: 'auto',
+          quality: 'high'
+        };
+      } else if (operation === 'redirect_gaze') {
+        requestSettings = {
+          targetDirection: 0.0 // Look at camera (center)
         };
       }
 
@@ -446,7 +457,7 @@ const App: React.FC = () => {
                 </span>
               </h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Remove Silence - Enhanced */}
                 <div className="card-3d neumorphic-button p-8 rounded-2xl hover:bg-white/5 transition-all duration-500 group relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -463,17 +474,17 @@ const App: React.FC = () => {
                     </div>
                     
                     <p className="text-gray-300 text-sm mb-6 leading-relaxed">
-                      Remove automaticamente pausas e silêncios com precisão profissional, criando transições cinematográficas suaves.
+                      Remove automaticamente pausas, silêncios e detecta reinícios de fala após erros, criando transições cinematográficas suaves.
                     </p>
                     
                     <div className="space-y-3 mb-6 text-xs text-gray-400">
                       <div className="flex items-center">
                         <Zap className="w-3 h-3 mr-2 text-yellow-400" />
-                        <span>Detecção automática de silêncios</span>
+                        <span>Detecção inteligente de reinícios de fala</span>
                       </div>
                       <div className="flex items-center">
                         <Cpu className="w-3 h-3 mr-2 text-blue-400" />
-                        <span>Transições suaves profissionais</span>
+                        <span>Remove hesitações e palavras de preenchimento</span>
                       </div>
                       <div className="flex items-center">
                         <Settings className="w-3 h-3 mr-2 text-purple-400" />
@@ -517,17 +528,17 @@ const App: React.FC = () => {
                     </div>
                     
                     <p className="text-gray-300 text-sm mb-6 leading-relaxed">
-                      Remoção de fundo com qualidade cinematográfica usando IA BiRefNet com detecção de bordas ultra-precisa.
+                      Remoção de fundo ultra-rápida como CapCut, otimizada para velocidade máxima mantendo qualidade profissional.
                     </p>
                     
                     <div className="space-y-3 mb-6 text-xs text-gray-400">
                       <div className="flex items-center">
                         <Sparkles className="w-3 h-3 mr-2 text-purple-400" />
-                        <span>Qualidade profissional garantida</span>
+                        <span>Velocidade CapCut com qualidade profissional</span>
                       </div>
                       <div className="flex items-center">
                         <Monitor className="w-3 h-3 mr-2 text-blue-400" />
-                        <span>Detecção de bordas aprimorada</span>
+                        <span>Algoritmo otimizado para velocidade</span>
                       </div>
                       <div className="flex items-center">
                         <Settings className="w-3 h-3 mr-2 text-green-400" />
@@ -603,6 +614,114 @@ const App: React.FC = () => {
                         <>
                           <Subtitles className="w-6 h-6" />
                           <span>Processar Agora</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Video Upscaler - New */}
+                <div className="card-3d neumorphic-button p-8 rounded-2xl hover:bg-white/5 transition-all duration-500 group relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  
+                  <div className="relative z-10">
+                    <div className="flex items-center mb-6">
+                      <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center mr-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg shadow-blue-500/25">
+                        <Monitor className="w-8 h-8 text-white drop-shadow-lg" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-white mb-1">Upscale Vídeo</h3>
+                        <p className="text-sm text-blue-400 font-medium">Video2X IA</p>
+                      </div>
+                    </div>
+                    
+                    <p className="text-gray-300 text-sm mb-6 leading-relaxed">
+                      Aumenta a resolução do vídeo usando IA avançada, transformando 720p em 4K com qualidade cinematográfica.
+                    </p>
+                    
+                    <div className="space-y-3 mb-6 text-xs text-gray-400">
+                      <div className="flex items-center">
+                        <Sparkles className="w-3 h-3 mr-2 text-blue-400" />
+                        <span>Real-ESRGAN e Waifu2x</span>
+                      </div>
+                      <div className="flex items-center">
+                        <Monitor className="w-3 h-3 mr-2 text-cyan-400" />
+                        <span>2x e 4x upscaling</span>
+                      </div>
+                      <div className="flex items-center">
+                        <Settings className="w-3 h-3 mr-2 text-green-400" />
+                        <span>Preservação de detalhes</span>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={() => startProcessing('upscale_video')}
+                      disabled={isProcessing || !backendAvailable}
+                      className="w-full modern-button bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed py-4 rounded-xl font-bold transition-all duration-300 flex items-center justify-center space-x-3 shadow-lg hover:shadow-blue-500/25 hover:scale-105"
+                    >
+                      {isProcessing && activeOperation === 'upscale_video' ? (
+                        <>
+                          <Loader2 className="w-6 h-6 animate-spin" />
+                          <span>Processando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Monitor className="w-6 h-6" />
+                          <span>Upscale Agora</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Gaze Redirector - New */}
+                <div className="card-3d neumorphic-button p-8 rounded-2xl hover:bg-white/5 transition-all duration-500 group relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-yellow-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  
+                  <div className="relative z-10">
+                    <div className="flex items-center mb-6">
+                      <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-2xl flex items-center justify-center mr-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg shadow-orange-500/25">
+                        <Sparkles className="w-8 h-8 text-white drop-shadow-lg" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-white mb-1">Redirecionar Olhar</h3>
+                        <p className="text-sm text-orange-400 font-medium">Gaze Estimation IA</p>
+                      </div>
+                    </div>
+                    
+                    <p className="text-gray-300 text-sm mb-6 leading-relaxed">
+                      Redireciona automaticamente o olhar para a câmera, criando conexão visual perfeita com o espectador.
+                    </p>
+                    
+                    <div className="space-y-3 mb-6 text-xs text-gray-400">
+                      <div className="flex items-center">
+                        <Sparkles className="w-3 h-3 mr-2 text-orange-400" />
+                        <span>Detecção facial avançada</span>
+                      </div>
+                      <div className="flex items-center">
+                        <Monitor className="w-3 h-3 mr-2 text-yellow-400" />
+                        <span>Rastreamento de olhos</span>
+                      </div>
+                      <div className="flex items-center">
+                        <Settings className="w-3 h-3 mr-2 text-red-400" />
+                        <span>Redirecionamento natural</span>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={() => startProcessing('redirect_gaze')}
+                      disabled={isProcessing || !backendAvailable}
+                      className="w-full modern-button bg-gradient-to-r from-orange-600 to-yellow-600 hover:from-orange-700 hover:to-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed py-4 rounded-xl font-bold transition-all duration-300 flex items-center justify-center space-x-3 shadow-lg hover:shadow-orange-500/25 hover:scale-105"
+                    >
+                      {isProcessing && activeOperation === 'redirect_gaze' ? (
+                        <>
+                          <Loader2 className="w-6 h-6 animate-spin" />
+                          <span>Processando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-6 h-6" />
+                          <span>Redirecionar</span>
                         </>
                       )}
                     </button>

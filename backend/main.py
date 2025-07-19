@@ -17,8 +17,12 @@ import uvicorn
 
 # Import our processing modules
 from background_remover import process_video as remove_background_video, test_models
+from background_remover_fast import process_video_fast as remove_background_fast
 from silence_remover import remove_silence, ffmpeg_silence_removal
+from silence_remover_advanced import remove_silence_advanced
 from subtitle_generator import generate_subtitles
+from video_upscaler import upscale_video
+from gaze_redirector import redirect_gaze_video
 
 # Configure logging
 logging.basicConfig(
@@ -125,8 +129,10 @@ async def upload_video(file: UploadFile = File(...)):
         temp_dir = Path(tempfile.gettempdir()) / "video_editor_pro" / session_id
         temp_dir.mkdir(parents=True, exist_ok=True)
         
-        # Save uploaded file
-        input_path = temp_dir / f"input_{file.filename}"
+        # Save uploaded file with original name for proper naming
+        original_name = Path(file.filename).stem
+        original_ext = Path(file.filename).suffix
+        input_path = temp_dir / f"{original_name}{original_ext}"
         with open(input_path, "wb") as buffer:
             content = await file.read()
             buffer.write(content)
@@ -136,6 +142,8 @@ async def upload_video(file: UploadFile = File(...)):
             "input_path": str(input_path),
             "temp_dir": str(temp_dir),
             "filename": file.filename,
+            "original_name": original_name,
+            "original_ext": original_ext,
             "status": "uploaded",
             "created_at": datetime.now().isoformat(),
             "file_size": len(content),
@@ -171,7 +179,7 @@ async def process_video(
     temp_dir = Path(session["temp_dir"])
     
     # Validate operation
-    valid_operations = ['remove_silence', 'remove_background', 'generate_subtitles']
+    valid_operations = ['remove_silence', 'remove_background', 'generate_subtitles', 'upscale_video', 'redirect_gaze']
     if request.operation not in valid_operations:
         raise HTTPException(status_code=400, detail=f"Operação inválida. Deve ser uma de: {valid_operations}")
     
@@ -255,6 +263,8 @@ async def process_video_background(
     """Background task for video processing"""
     try:
         session = processing_status[session_id]
+        original_name = session.get("original_name", "video")
+        original_ext = session.get("original_ext", ".mp4")
         
         # Update status function
         def update_status(stage: str, progress: float, message: str):
@@ -267,14 +277,24 @@ async def process_video_background(
             })
             logger.info(f"📊 Sessão {session_id}: {stage} - {progress}% - {message}")
         
-        output_path = temp_dir / f"output_{Path(input_path).stem}.mp4"
+        # Create output path with operation suffix
+        operation_suffix = {
+            "remove_silence": "sl",
+            "remove_background": "bg", 
+            "generate_subtitles": "sub",
+            "upscale_video": "up",
+            "redirect_gaze": "gaze"
+        }.get(operation, "proc")
+        
+        output_path = temp_dir / f"{original_name}{operation_suffix}{original_ext}"
         
         if operation == "remove_silence":
             update_status("analyzing", 15, "🔍 Analisando áudio para detectar silêncios...")
             await asyncio.sleep(2)
             
             update_status("processing", 60, "✂️ Removendo silêncios e criando transições suaves...")
-            success = await remove_silence(
+            # Use advanced silence removal
+            success = await remove_silence_advanced(
                 input_path, 
                 str(output_path), 
                 settings.get('silenceThreshold', -30),
@@ -332,6 +352,36 @@ async def process_video_background(
             shutil.copy2(input_path, output_path)
             
             update_status("encoding", 90, "🔄 Sincronizando legendas com vídeo...")
+            await asyncio.sleep(2)
+            
+        elif operation == "upscale_video":
+            update_status("analyzing", 15, "🔍 Analisando resolução do vídeo...")
+            await asyncio.sleep(2)
+            
+            update_status("processing", 60, "📈 Upscaling com IA (Video2X)...")
+            success = await upscale_video(
+                input_path,
+                str(output_path),
+                scale_factor=settings.get('scaleFactor', 2),
+                model=settings.get('model', 'auto'),
+                quality=settings.get('quality', 'high')
+            )
+            
+            update_status("encoding", 90, "✨ Finalizando vídeo em alta resolução...")
+            await asyncio.sleep(2)
+            
+        elif operation == "redirect_gaze":
+            update_status("analyzing", 15, "👁️ Detectando rostos e olhos...")
+            await asyncio.sleep(2)
+            
+            update_status("processing", 60, "🎯 Redirecionando olhar...")
+            success = await redirect_gaze_video(
+                input_path,
+                str(output_path),
+                target_direction=settings.get('targetDirection', 0.0)
+            )
+            
+            update_status("encoding", 90, "✨ Aplicando correções finais...")
             await asyncio.sleep(2)
             
         else:
