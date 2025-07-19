@@ -153,7 +153,6 @@ const App: React.FC = () => {
   }, [handleFileUpload]);
 
   // Processing functions
-  const startProcessing = async (operation: 'remove_silence' | 'remove_background' | 'generate_subtitles') => {
   const startProcessing = async (operation: 'remove_silence' | 'remove_background' | 'generate_subtitles' | 'upscale_video' | 'redirect_gaze') => {
     if (!sessionId) {
       alert('Por favor, carregue um vídeo primeiro.');
